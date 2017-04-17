@@ -52,6 +52,8 @@ void sha3_Init512(void *priv);
 void sha3_Update(void *priv, void const *bufIn, size_t len);
 void const* sha3_Finalize(void *priv);
 
+#endif //SHA3_H
+
 #ifdef SHA3_BODY_IMPLEMENTATION 
 
 #include <stdio.h>
@@ -657,4 +659,3 @@ main()
 }
 #endif //SHA3_TEST
 #endif //SHA3_BODY_IMPLEMENTATION 
-#endif //SHA3_H
