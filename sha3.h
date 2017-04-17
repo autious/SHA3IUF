@@ -1,4 +1,7 @@
 /* -------------------------------------------------------------------------
+ * This is a modified version of the implementation that follows the stb single header structure for inclusion in larger projects.
+ *
+ * ----------------------------------------------------
  * Works when compiled for either 32-bit or 64-bit targets, optimized for 
  * 64 bit.
  *
@@ -15,9 +18,43 @@
  *
  * Aug 2015. Andrey Jivsov. crypto@brainhub.org
  * ---------------------------------------------------------------------- */
+#ifndef SHA3_H
+#define SHA3_H
+
+#include <stdint.h>
+#include <stddef.h>
+
+/* The following state definition should normally be in a separate 
+ * header file 
+ */
+
+/* 'Words' here refers to uint64_t */
+#define SHA3_KECCAK_SPONGE_WORDS \
+	(((1600)/8/*bits to byte*/)/sizeof(uint64_t))
+typedef struct sha3_context_ {
+    uint64_t saved;             /* the portion of the input message that we
+                                 * didn't consume yet */
+    union {                     /* Keccak's state */
+        uint64_t s[SHA3_KECCAK_SPONGE_WORDS];
+        uint8_t sb[SHA3_KECCAK_SPONGE_WORDS * 8];
+    };
+    unsigned byteIndex;         /* 0..7--the next byte after the set one
+                                 * (starts from 0; 0--none are buffered) */
+    unsigned wordIndex;         /* 0..24--the next word to integrate input
+                                 * (starts from 0) */
+    unsigned capacityWords;     /* the double size of the hash output in
+                                 * words (e.g. 16 for Keccak 512) */
+} sha3_context;
+
+void sha3_Init256(void *priv);
+void sha3_Init384(void *priv);
+void sha3_Init512(void *priv);
+void sha3_Update(void *priv, void const *bufIn, size_t len);
+void const* sha3_Finalize(void *priv);
+
+#ifdef SHA3_BODY_IMPLEMENTATION 
 
 #include <stdio.h>
-#include <stdint.h>
 #include <string.h>
 
 #define SHA3_ASSERT( x )
@@ -43,28 +80,6 @@
 #else
 #define SHA3_CONST(x) x##L
 #endif
-
-/* The following state definition should normally be in a separate 
- * header file 
- */
-
-/* 'Words' here refers to uint64_t */
-#define SHA3_KECCAK_SPONGE_WORDS \
-	(((1600)/8/*bits to byte*/)/sizeof(uint64_t))
-typedef struct sha3_context_ {
-    uint64_t saved;             /* the portion of the input message that we
-                                 * didn't consume yet */
-    union {                     /* Keccak's state */
-        uint64_t s[SHA3_KECCAK_SPONGE_WORDS];
-        uint8_t sb[SHA3_KECCAK_SPONGE_WORDS * 8];
-    };
-    unsigned byteIndex;         /* 0..7--the next byte after the set one
-                                 * (starts from 0; 0--none are buffered) */
-    unsigned wordIndex;         /* 0..24--the next word to integrate input
-                                 * (starts from 0) */
-    unsigned capacityWords;     /* the double size of the hash output in
-                                 * words (e.g. 16 for Keccak 512) */
-} sha3_context;
 
 #ifndef SHA3_ROTL64
 #define SHA3_ROTL64(x, y) \
@@ -143,7 +158,7 @@ keccakf(uint64_t s[25])
 /* *************************** Public Inteface ************************ */
 
 /* For Init or Reset call these: */
-static void
+void
 sha3_Init256(void *priv)
 {
     sha3_context *ctx = (sha3_context *) priv;
@@ -151,7 +166,7 @@ sha3_Init256(void *priv)
     ctx->capacityWords = 2 * 256 / (8 * sizeof(uint64_t));
 }
 
-static void
+void
 sha3_Init384(void *priv)
 {
     sha3_context *ctx = (sha3_context *) priv;
@@ -159,7 +174,7 @@ sha3_Init384(void *priv)
     ctx->capacityWords = 2 * 384 / (8 * sizeof(uint64_t));
 }
 
-static void
+void
 sha3_Init512(void *priv)
 {
     sha3_context *ctx = (sha3_context *) priv;
@@ -167,7 +182,7 @@ sha3_Init512(void *priv)
     ctx->capacityWords = 2 * 512 / (8 * sizeof(uint64_t));
 }
 
-static void
+void
 sha3_Update(void *priv, void const *bufIn, size_t len)
 {
     sha3_context *ctx = (sha3_context *) priv;
@@ -261,7 +276,7 @@ sha3_Update(void *priv, void const *bufIn, size_t len)
  * The padding block is 0x01 || 0x00* || 0x80. First 0x01 and last 0x80 
  * bytes are always present, but they can be the same byte.
  */
-static void const *
+void const *
 sha3_Finalize(void *priv)
 {
     sha3_context *ctx = (sha3_context *) priv;
@@ -355,6 +370,7 @@ sha3_Finalize(void *priv)
  *
  */
 
+#ifdef SHA3_TEST
 int
 main()
 {
@@ -639,3 +655,6 @@ main()
 
     return 0;
 }
+#endif //SHA3_TEST
+#endif //SHA3_BODY_IMPLEMENTATION 
+#endif //SHA3_H
